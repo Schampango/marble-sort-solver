@@ -1,0 +1,470 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Marble Sort Levelatlas</title>
+<meta name="description" content="Lösungswege für alle Level von Marble Sort">
+</head>
+<body>
+<style>
+/* Layout: Kopfzeile mit Levelnavigation; darunter links Spielfeld + Level-Daten, rechts Lösungsweg + Becher (gleich hoch) */
+:root{
+  --bg:#eef1f4; --panel:#ffffff; --ink:#18202b; --muted:#5d6877; --line:#d5dbe2; --board:#dfe4ea; --wall:#9aa5b2;
+  --box:#3b4a5c; --box-fg:#ffffff; --sel:#e6f0fb;
+  --f-out:#2f7fd1; --f-gate:#d0782a; --f-lock:#a2408f; --f-pillar:#2e9a72; --f-misc:#7a62c9;
+  --accent:#2f7fd1; --hard:#b4561a; --vhard:#c43d4b; --ok:#2e9a72;
+  --display:"Familjen Grotesk","Helvetica Neue",Arial,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#12161c; --panel:#1a2029; --ink:#e6ebf1; --muted:#9aa6b4; --line:#2c3542; --board:#232b36; --wall:#4a5564;
+  --box:#c7d1dc; --box-fg:#12161c; --sel:#1d3046;
+  --f-out:#5aa2ec; --f-gate:#eb9a50; --f-lock:#d073bf; --f-pillar:#4fc497; --f-misc:#a28ef0;
+  --accent:#5aa2ec; --hard:#eb9a50; --vhard:#ef6b77; --ok:#4fc497; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12161c; --panel:#1a2029; --ink:#e6ebf1; --muted:#9aa6b4; --line:#2c3542; --board:#232b36; --wall:#4a5564;
+  --box:#c7d1dc; --box-fg:#12161c; --sel:#1d3046;
+  --f-out:#5aa2ec; --f-gate:#eb9a50; --f-lock:#d073bf; --f-pillar:#4fc497; --f-misc:#a28ef0;
+  --accent:#5aa2ec; --hard:#eb9a50; --vhard:#ef6b77; --ok:#4fc497; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14px;line-height:1.45}
+.wrap{max-width:1240px;margin:0 auto;padding-block:18px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:18px}
+header{display:flex;flex-wrap:wrap;align-items:center;gap:12px 20px}
+.brand{font:700 15px var(--display);color:var(--ink)}
+nav.lv{display:flex;align-items:center;gap:8px;flex:1 1 auto;justify-content:center;min-width:0}
+.navbtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:88px;flex:none;min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:500 14px var(--body);cursor:pointer}
+.navbtn:disabled{opacity:.4;cursor:default}
+.title{display:flex;align-items:baseline;gap:10px;padding:0 10px;min-width:0;flex:0 1 340px;width:340px;flex-wrap:wrap;justify-content:center}
+h1{font:700 30px var(--display);letter-spacing:-.01em;margin:0;white-space:nowrap}
+.tag{font:600 11px var(--body);letter-spacing:.06em;text-transform:uppercase;padding:1px 6px;border-radius:4px;border:1px solid currentColor}
+.tag.h{color:var(--hard)}.tag.v{color:var(--vhard)}.tag.e{color:var(--accent)}.tag.t{color:var(--ok)}
+.jump{display:flex;align-items:center;gap:8px}
+.jump label{font-size:12px;color:var(--muted)}
+.jump input{width:150px;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);font:14px var(--mono)}
+.jump .err{font-size:12px;color:var(--vhard)}
+main{display:flex;flex-wrap:wrap;gap:18px;align-items:stretch}
+.left{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:18px}
+.right{flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:18px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card h2{font:700 17px var(--display);margin:0}
+.hrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.sub{font:500 12px var(--mono);color:var(--muted);word-break:break-all}
+.note{font-size:12px;color:var(--muted);margin:0}
+.boardwrap{display:flex;justify-content:center}
+.board{width:100%;max-width:560px;aspect-ratio:1;display:block;background:var(--board);border-radius:12px}
+.stepper{display:flex;flex-wrap:nowrap;align-items:center;justify-content:center;gap:10px}
+.varsel[hidden]{display:none}
+.varsel{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--muted)}
+.varsel button{font:500 13px var(--body);padding:4px 10px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.varsel button[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.varsel i{display:inline-block;width:10px;height:10px;border-radius:3px}
+.solnote{margin:0;padding:10px 12px;border-radius:8px;background:var(--board);font-size:13px;line-height:1.45;color:var(--ink)}
+.solnote.warn{border-left:3px solid #d9822b}
+.sbtn{min-width:44px;min-height:44px;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.sbtn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.sbtn:disabled{opacity:.35;cursor:default}
+.stxt{flex:0 0 460px;width:460px;max-width:calc(100% - 128px);min-height:64px;justify-content:center;text-align:center;display:flex;flex-direction:column;gap:2px}
+.stxt b{font:700 18px var(--display)}
+.stxt span{font-size:13px;color:var(--muted)}
+.facts{margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:6px 20px;font-size:13px}
+.facts div{display:flex;gap:10px;min-width:0}
+.facts dt{color:var(--muted);flex:none;min-width:96px}
+.facts dd{margin:0;font-variant-numeric:tabular-nums;min-width:0;overflow-wrap:anywhere}
+.pal{display:flex;flex-wrap:wrap;gap:6px}
+.sw2{display:inline-flex;align-items:center;gap:6px;font-size:12px;border:1px solid var(--line);border-radius:999px;padding:3px 9px 3px 3px}
+.sw2 i{width:16px;height:16px;border-radius:50%;display:inline-block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted)}
+.legend span{display:inline-flex;gap:5px;align-items:center}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.steps{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;max-height:360px;overflow:auto}
+.steps button{width:100%;min-height:30px;display:flex;align-items:center;gap:10px;padding:2px 10px;border-radius:6px;border:1px solid transparent;background:transparent;color:var(--ink);font:14px var(--body);cursor:pointer;text-align:left}
+.steps button[aria-current="true"]{background:var(--sel);border-color:var(--accent)}
+.steps .n{font:600 12px var(--mono);color:var(--muted);width:24px;text-align:right}
+.steps .sw{width:16px;height:16px;border-radius:4px;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15)}
+.steps .w{margin-left:auto;white-space:nowrap;font:500 12px var(--mono);color:var(--muted)}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--muted);font-size:13px}
+.cupcard{flex:1 1 0;min-height:280px}
+.cups{flex:1 1 0;min-height:0;overflow:auto;display:grid;gap:8px;align-content:start}
+.lane{display:flex;flex-direction:column;gap:4px}
+.lane .lh{font:600 11px var(--mono);color:var(--muted);text-align:center;position:sticky;top:0;background:var(--panel);padding-bottom:2px}
+.cup{height:18px;border-radius:5px;display:grid;place-items:center;font:600 10px var(--mono);color:var(--box-fg);background:var(--box);box-shadow:inset 0 -3px 0 rgba(0,0,0,.15)}
+.cup.bk{height:24px;outline:2px dashed var(--ink);outline-offset:-2px;color:#fff;text-shadow:0 0 2px #000}
+.btn{font:500 13px var(--body);color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer}
+.btn[aria-pressed="true"]{border-color:var(--accent);color:var(--accent)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.rk{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:10px;display:grid;gap:8px}
+.rk[hidden]{display:none}
+.rkhead{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline;justify-content:space-between}
+.rkhead b{font-size:14px}
+.rkst{font-size:12px;color:var(--muted)}
+.rkst.err{color:var(--vhard)}
+.rkbtns{display:flex;flex-wrap:wrap;gap:8px}
+.board.marking g[data-xy]{cursor:crosshair}
+.cup.ice{position:relative;overflow:hidden}
+.cup.ice::after{content:"❄";position:absolute;inset:0;display:grid;place-items:center;font-size:12px;color:#1d3b57;background:linear-gradient(135deg,rgba(255,255,255,.75),rgba(205,235,255,.55));box-shadow:inset 0 0 0 2px rgba(255,255,255,.9)}
+.cup.rf{outline:2px solid var(--vhard);outline-offset:-2px}
+.tip{position:fixed;pointer-events:none;background:var(--ink);color:var(--bg);font:12px var(--body);padding:6px 8px;border-radius:6px;max-width:260px;z-index:20}
+.loading{padding:60px;text-align:center;color:var(--muted)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media (max-width:640px){h1{font-size:24px}.title{flex:1 1 0;width:auto;padding:0 4px}.navbtn{width:70px;padding:0 6px}.stxt{flex:1 1 0;width:auto;min-width:0;max-width:none}.jump{width:100%}.jump input{flex:1;width:auto}}
+</style>
+
+<div class="wrap">
+  <header>
+    <span class="brand">Marble Sort Levelatlas</span>
+    <nav class="lv" aria-label="Levelnavigation">
+      <button class="navbtn" id="prev" type="button" aria-label="Vorheriges Level"><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg><span id="prevl"></span></button>
+      <div class="title"><h1 id="lvtitle">Level …</h1><span id="lvtags"></span></div>
+      <button class="navbtn" id="next" type="button" aria-label="Nächstes Level"><span id="nextl"></span><svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+    </nav>
+    <form class="jump" id="jumpf" autocomplete="off">
+      <label for="jump">Gehe zu</label>
+      <input id="jump" type="search" placeholder="Nummer oder Name">
+      <span class="err" id="jerr" role="status"></span>
+    </form>
+  </header>
+
+  <main id="main">
+    <div class="left">
+      <section class="card" aria-labelledby="h-board">
+        <div class="hrow"><h2 id="h-board">Spielfeld</h2><span class="sub" id="lvname"></span></div>
+        <div class="boardwrap"><svg class="board" id="board" viewBox="0 0 100 100" role="img" aria-label="Spielfeld"><text x="50" y="50" text-anchor="middle" font-size="4" fill="currentColor">Level werden entpackt …</text></svg></div>
+        <div class="legend" id="legend"></div>
+        <div class="stepper">
+          <button class="sbtn" id="sprev" type="button" aria-label="Vorheriger Zug" disabled><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <div class="stxt"><b id="stitle">Lösung noch nicht berechnet</b><span id="stext">Der Löser ist in Arbeit.</span></div>
+          <button class="sbtn pri" id="snext" type="button" aria-label="Nächster Zug" disabled><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg></button>
+        </div>
+        <p class="solnote" id="solnote" hidden></p>
+        <div class="rk" id="rkbox" hidden>
+          <div class="rkhead"><b>Raketen zu Beginn</b><span class="rkst" id="rkst" role="status"></span></div>
+          <p class="note" id="rktxt">Wenn zu Beginn Raketen Boxen wegsprengen: Tippe auf „Treffer markieren“ und dann auf dem Spielfeld die getroffenen Boxen in der Reihenfolge der Raketen an (höchstens 3). Danach rechne ich einen passenden Weg.</p>
+          <div class="rkbtns"><button class="btn" id="rkmark" type="button" aria-pressed="false">Treffer markieren</button><button class="btn pri" id="rkgo" type="button" disabled>Weg neu berechnen</button><button class="btn" id="rkclr" type="button" hidden>Treffer löschen</button></div>
+        </div>
+        <p class="note">Ausrichtung wie im Spiel, unten ist der Trichter. Kleines ? = im Spiel verdeckt, S = Sack, K = Schlüssel. Farbstreifen in Tunneln und Containern zeigen ihre Boxen in Ausgabereihenfolge. Kleiner Kreis = per Screenshot bestätigt.</p>
+      </section>
+
+      <section class="card" aria-labelledby="h-facts">
+        <div class="hrow"><h2 id="h-facts">Level-Daten</h2><button class="btn" id="exbtn" type="button" aria-pressed="false" hidden>Farbgruppen zeigen</button></div>
+        <dl class="facts" id="facts"></dl>
+        <div class="pal" id="pal"></div>
+        <p class="note" id="palnote"></p>
+      </section>
+    </div>
+
+    <div class="right">
+      <section class="card" aria-labelledby="h-steps">
+        <div class="hrow"><h2 id="h-steps">Lösungsweg</h2><span class="sub" id="stepcount"></span></div>
+        <div class="varsel" id="varsel" hidden></div>
+        <ol class="steps" id="steps"></ol>
+        <div class="empty" id="noSol">Für dieses Level ist noch keine Lösung berechnet. Sobald der Löser fertig ist, stehen hier die Züge der Reihe nach.</div>
+      </section>
+      <section class="card cupcard" aria-labelledby="h-cups">
+        <div class="hrow"><h2 id="h-cups">Becher am Band</h2><span class="sub" id="cupn"></span></div>
+        <div class="cups" id="cups"></div>
+        <p class="note" id="cupnote"></p>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>const MAN={"ch":["d/c000.7bf84a3e25.dat","d/c001.50815e0b51.dat","d/c002.c531c57895.dat","d/c003.136d6f16ad.dat","d/c004.6cae49f3ec.dat","d/c005.6918f993f4.dat","d/c006.abbe2ed8c9.dat","d/c007.c6ceeb5a58.dat","d/c008.e7b0b54add.dat","d/c009.3a3574be88.dat","d/c010.fcb7e79e56.dat","d/c011.7d8b95bbb4.dat","d/c012.bca3c57f58.dat","d/c013.5dee9adb25.dat","d/c014.79261c21ba.dat","d/c015.eea8065b46.dat","d/c016.9dcab8f033.dat","d/c017.af6f9f5db2.dat","d/c018.d4e85c6154.dat","d/c019.d629522b4f.dat","d/c020.9d4f32c4ca.dat","d/c021.bd0f326349.dat","d/c022.d9be450fdf.dat","d/c023.159539ac34.dat","d/c024.3a62020bab.dat","d/c025.a8299436fa.dat","d/c026.168033ce1e.dat","d/c027.355402efc6.dat","d/c028.596f429573.dat","d/c029.ddb205ed63.dat","d/c030.c999604334.dat","d/c031.7fc0671385.dat","d/c032.341eca48ba.dat","d/c033.8925f879c7.dat","d/c034.92b1f02ff9.dat","d/c035.e34a2311e9.dat","d/c036.b0b298ac62.dat","d/c037.72e03b8aea.dat","d/c038.a41b405c8b.dat","d/c039.5e48b6ac50.dat","d/c040.68f32da7d9.dat","d/c041.3a4ab2fd34.dat","d/c042.76c26c61a7.dat","d/c043.ccf6e891a8.dat","d/c044.285f16a400.dat","d/c045.5f01d91a68.dat","d/c046.a2c6fd7c72.dat","d/c047.b954cc3572.dat","d/c048.3271d50f1b.dat","d/c049.891223018e.dat","d/c050.f3f427d240.dat","d/c051.2a98678694.dat","d/c052.08da03cf61.dat","d/c053.6246073ca2.dat","d/c054.3df07455a7.dat","d/c055.47d94064f5.dat","d/c056.c556dbe28c.dat","d/c057.02b23aee2a.dat","d/c058.a71ca1d90f.dat","d/c059.a9f7523de4.dat","d/c060.67cffd31cd.dat","d/c061.2014858d93.dat","d/c062.f838bdb60e.dat","d/c063.cf8ca4f8a5.dat","d/c064.fa77064a33.dat","d/c065.0fe9ac50ae.dat","d/c066.3b7d537f84.dat","d/c067.dfa59bf33b.dat","d/c068.f457d03fa1.dat","d/c069.84da8d4c86.dat","d/c070.b850e3c5c8.dat","d/c071.a79c238f39.dat","d/c072.3cc61b20f3.dat","d/c073.25055185e8.dat","d/c074.02ea3c13e3.dat","d/c075.6e426a7269.dat","d/c076.1eed22a311.dat","d/c077.17a4a1251b.dat","d/c078.a0e6407020.dat","d/c079.26d8054cb1.dat","d/c080.5d6d431b10.dat","d/c081.44e5900fa7.dat","d/c082.3e501371cb.dat","d/c083.5812def336.dat","d/c084.6afefc7db1.dat","d/c085.0b63c2e7a3.dat","d/c086.3a0261608a.dat","d/c087.2188c87128.dat","d/c088.d41bcc9cbb.dat","d/c089.5adccdc5b5.dat","d/c090.1f1ad981e6.dat","d/c091.a8ce07d7ca.dat","d/c092.677d705d7a.dat","d/c093.20550608d7.dat","d/c094.d344e1b073.dat","d/c095.0c652487e2.dat","d/c096.3a73ee9302.dat","d/c097.8b8dfbf0b8.dat","d/c098.ee8eee1a6b.dat","d/c099.336aea5b29.dat","d/c100.299a8d96f4.dat","d/c101.ab0a9dbf09.dat","d/c102.a5fb84822d.dat","d/c103.e3f9d1af47.dat","d/c104.0e6390e257.dat","d/c105.ee7caafc68.dat","d/c106.4216c59d4d.dat","d/c107.7788c5abb7.dat","d/c108.0f1dd1e1d9.dat","d/c109.24b5fd23f6.dat","d/c110.f2ad8c8e8b.dat","d/c111.d8024cc77c.dat","d/c112.014b9e8664.dat"],"idx":"d/idx.e1a3861f35.dat","names":"d/names.597da85660.dat","py":"d/py.f3a963411e.dat","rk":"r-5e7684fb6a/","n":50};</script>
+<script>
+(function(){
+const FAM={box:'--box',out:'--f-out',gate:'--f-gate',lock:'--f-lock',pillar:'--f-pillar',misc:'--f-misc'};
+const AUTO={arrow:'Pfeilbox freigegeben',ice:'Eis oder Stein gebrochen',tog:'Umschaltbox entsperrt',pillar:'Säule entfernt',adj:'Abdeckung entfernt',tgate:'Tor geöffnet',mpillar:'Säulenstück entfernt',ccrate:'Farbkiste geöffnet'};
+const autoTxt=a=>{const c={};a.forEach(k=>c[k]=(c[k]||0)+1);return Object.entries(c).map(([k,n])=>(AUTO[k]||k)+(n>1?` (${n}×)`:'')).join(', ');};
+const UNS={bubble:'Blasenkugeln (kommen hier einen Zug später an)',heavy:'schwere Kugeln (behandelt wie normale Kugeln)',csafe:'Farbtresore',ccrate:'Farbkisten',rplat:'Drehplattformen',gift:'Geschenkboxen (Ablageplätze)',mpillar:'modulare Säulen'};
+const NOS={ArrowBoxConditionData:'Pfeilboxen',RemovablePillarData:'Säulen',Adjacent2x1Data:'2×1-Boxen',RocketConditionData:'Raketen (ihr Ziel wählt das Spiel zufällig)',ToggleBoxConditionData:'Umschaltboxen',IceBoxConditionData:'Eisboxen',SecretCustomersConditionData:'geheime Becher',ToggleGateData:'Umschalttore',BubbleBallsConditionData:'Blasenkugeln',ModularPillarData:'modulare Säulen',BucketTray:'Eimer',MiniMultiplierGateConditionData:'Mini-Multiplikatoren',ColorSafeData:'Farbtresore',DoublePinConditionData:'Doppel-Pins',RockBoxConditionData:'Steinboxen',PuzzlePieceConditionData:'Puzzleteile',PuzzleLockData:'Puzzleschlösser',HeavyMarblesConditionData:'schwere Kugeln',ColorCrateData:'Farbkisten',GlassPanelData:'Glasplatten',RotatingPlatformData:'Drehplattformen',MultiplierGateConditionData:'Multiplikatoren',LockedCustomer:'gesperrte Becher',ConnectedCustomer:'verbundene Becher',LongConnectedCustomer:'lange verbundene Becher',IceCustomer:'Eisbecher',FrostCustomer:'Frostbecher',CrateCustomer:'Kistenbecher',SpecialCustomers:'Spezialbecher',layer:'Aufzugsboxen',mod4:'Kettenschlüssel',mod8:'Becherschlüssel',mod80:'Eisboxen',mod100:'Dreifarbboxen',mod200:'Blockerkugeln',mod400:'Doppelboxen',mod800:'Blasenkugeln',mod1000:'Puzzleteile',mod2000:'schwere Kugeln',cat6:'Tore',cat7:'Aufzüge',cat8:'Pins',cat9:'Platten',cat10:'Kisten',cat11:'Kettenschlösser',cat12:'Kettenschlösser',cat13:'kurze Kettenschlösser',cat14:'kurze Kettenschlösser',cat15:'Säulen',cat16:'2×1-Boxen',cat18:'Raketen (ihr Ziel wählt das Spiel zufällig)',cat19:'Farbtresore',cat20:'Umschalttore',cat21:'Doppel-Pins',cat22:'modulare Säulen',cat23:'Drehplattformen',cat24:'Puzzleschlösser',cat25:'Glasplatten',cat26:'Mini-Multiplikatoren',cat28:'Farbkisten',fail:'keine Lösung gefunden',noseed:'unbekannter Seed'};
+const CAT={1:['Bx','Kugelbox','box'],3:['T','Tunnel','out'],4:['CT','Box-Stapel','out'],5:['GB','Container','out'],17:['GT','Tor-Container','out'],6:['G','Tor / Multiplikator','gate'],26:['MG','Multiplikator-Tor','gate'],18:['R','Rakete','gate'],8:['Pi','Pin','lock'],21:['DP','Doppel-Pin','lock'],9:['Pa','Platte','lock'],25:['GP','Glasplatte','lock'],10:['Cr','Kiste','lock'],28:['CC','Farbkiste','lock'],19:['CS','Farbtresor','lock'],24:['PL','Puzzleschloss','lock'],11:['L','Kettenschloss','lock'],12:['L','Kettenschloss','lock'],13:['L','Kettenschloss kurz','lock'],14:['L','Kettenschloss kurz','lock'],15:['RP','Entfernbare Säule','pillar'],22:['MP','Modulare Säule','pillar'],23:['RoP','Drehplattform','pillar'],7:['E','Aufzug','misc'],16:['PB','Typ 16','misc'],20:['TBD','Typ 20','misc']};
+const ORDER=[1,3,4,5,17,6,26,18,8,21,9,25,10,28,19,24,11,12,13,14,15,22,23,7,16,20];
+const GROUP=['Tutorial','Normal','Turnier (EGT)'];
+const DIFF=['Normal','Schwer','Sehr schwer'];
+const DIRS={1:[0,1],2:[1,0],3:[0,-1],4:[-1,0]};
+const NF=11;
+const PAL={"1":["#e04b67","Rot"],"2":["#58d2ff","Hellblau"],"3":["#ffcf00","Gelb"],"4":["#974af8","Lila"],"5":["#0db237","Grün"],"6":["#ffaeee","Rosa"],"7":["#ff9100","Orange"],"8":["#11712f","Dunkelgrün"],"9":["#274ee0","Dunkelblau"],"10":["#ab5539","Braun"],"11":["#4d4a54","Schwarz"],"12":["#c0dcec","Weiß"],"13":["#96ff23","Limette"],"14":["#bc75ff","Flieder"],"15":["#119af1","Mittelblau"],"16":["#ab243e","Dunkelrot"],"17":["#1be798","Türkis"],"18":["#738e98","Grau"]};
+const MODE={scheme:'Palette des Levels, mit der Levelnummer gemischt',zone:'Zonen-Palette, mit der Levelnummer gewählt und gemischt',identity:'alle Boxen fest vorgegeben'};
+const $=id=>document.getElementById(id);
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+let L=[],SEQ=[],pos=0,example=false,step=0;
+
+function tcol(l,t){if(!t)return null;if(l.rm){const id=l.rm[t]??t;return PAL[id]?{id,c:PAL[id][0],n:PAL[id][1]}:null;}
+  if(!example)return null;const pal=(l.p&&l.p.length?l.p:Array.from({length:18},(_,i)=>i+1));const id=pal[(t-1)%pal.length];return PAL[id]?{id,c:PAL[id][0],n:'Gruppe '+t}:null;}
+function cname(l,t){const x=tcol(l,t);return x?x.n:(t?'Gruppe '+t:'–');}
+const cx0=l=>{if(l._cx0==null){let m=1e9;for(let j=0;j<l.k.length;j+=NF)m=Math.min(m,l.k[j]);l._cx0=m;}return l._cx0;};
+const rcv=(l,ci)=>l.rc?l.rc[ci]:0;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function gunz(url){
+  const r=await fetch(url);if(!r.ok)throw new Error('Laden fehlgeschlagen ('+r.status+'): '+url);
+  const buf=new Uint8Array(await r.arrayBuffer());
+  let txt;if(buf[0]===0x1f&&buf[1]===0x8b){if(!('DecompressionStream' in window))throw new Error('Dein Browser kann die Leveldaten nicht entpacken. Bitte eine aktuelle Version von Chrome, Edge, Firefox oder Safari nutzen.');txt=await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).text();}else txt=new TextDecoder().decode(buf);
+  return JSON.parse(txt);
+}
+let RKAV={},CHUNKS={},NAMES=null;
+function prep(l){if(l.sc){l.scm={};for(let q=0;q<l.sc.length;q+=3)l.scm[l.sc[q]+','+l.sc[q+1]]=l.sc[q+2];}const cs=new Set();for(let j=0;j<l.k.length;j+=NF)cs.add(l.k[j+2]);l.cats=cs;}
+async function load(){
+  const ix=await gunz(MAN.idx);ix.rk.forEach(k=>RKAV[k]=1);
+  L=ix.lv.map((lv,i)=>({i,lv:lv||null,n:'',_stub:1}));
+  SEQ=L.map((_,i)=>i).sort((a,b)=>(L[a].lv||1e9)-(L[b].lv||1e9)||a-b);
+}
+function ensure(p){const c=Math.floor(p/MAN.n);if(c<0||c>=MAN.ch.length)return Promise.resolve();
+  if(!CHUNKS[c])CHUNKS[c]=gunz(MAN.ch[c]).then(arr=>{arr.forEach((l,k)=>{const i=SEQ[c*MAN.n+k];l.i=i;prep(l);const o=L[i];if(o&&o.rk){l.rk=o.rk;}L[i]=l;});}).catch(e=>{delete CHUNKS[c];throw e;});
+  return CHUNKS[c];}
+
+function bounds(l){
+  let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;
+  for(let j=0;j<l.k.length;j+=NF){const x=l.k[j],y=l.k[j+1];x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}
+  for(let j=0;j<l.w.length;j+=2){const x=l.w[j],y=l.w[j+1];if(x>=x0-1&&x<=x1+1&&y>=y0-1&&y<=y1+1){x0=Math.min(x0,x);x1=Math.max(x1,x);y0=Math.min(y0,y);y1=Math.max(y1,y);}}
+  if(x0>x1){x0=y0=0;x1=y1=1;}
+  return {x0,x1,y0,y1,w:x1-x0+1,h:y1-y0+1};
+}
+
+function drawBoard(l){
+  const B=bounds(l),n=Math.max(B.w,B.h),cs=100/(n+0.4),ox=(100-B.w*cs)/2,oy=(100-B.h*cs)/2;
+  const P=(x,y)=>[ox+(x-B.x0)*cs,oy+(y-B.y0)*cs];
+  let s='';
+  for(let j=0;j<l.w.length;j+=2){const x=l.w[j],y=l.w[j+1];if(x<B.x0||x>B.x1||y<B.y0||y>B.y1)continue;const [px,py]=P(x,y);s+=`<rect x="${px+cs*.02}" y="${py+cs*.02}" width="${cs*.96}" height="${cs*.96}" rx="${cs*.06}" fill="var(--wall)"/>`;}
+  const used=new Set(),sol=(l.sol||[]);
+  for(const lay of [0,1])for(let j=0;j<l.k.length;j+=NF){
+    const [x,y,c,d,lk,md,ly,st,gm,pc,grp]=l.k.slice(j,j+NF);if((ly>0?1:0)!==lay)continue;used.add(c);
+    const [px,py]=P(x,y),info=CAT[c]||['?','Kategorie '+c,'misc'],col=`var(${FAM[info[2]]})`,vv=rcv(l,j/NF);
+    let tip=`${info[1]} · Spalte ${x-cx0(l)+1}, Reihe ${B.y1-y+1}`;
+    if(c===1&&vv)tip+=Array.isArray(vv)?` · Farben: ${vv.map(t=>cname(l,t)).join(' / ')}`:` · Farbe: ${cname(l,vv)}`;
+    if(c!==1&&Array.isArray(vv)&&vv.length)tip+=` · Inhalt: ${vv.map(t=>Array.isArray(t)?t.map(u=>cname(l,u)).join('+'):cname(l,t)).join(', ')}`;
+    if(c===1&&l.scm&&l.scm[x+','+y])tip+=` · Screenshot: ${PAL[l.scm[x+','+y]][1]}`;
+    if(pc)tip+=' · fest vorgegeben';if(gm&&c!==1)tip+=` · Multiplikator ×${gm}`;
+    if(c===1&&md&16)tip+=' · Sack';else if(c===1&&md&8)tip+=' · mit Schlüssel';else if(c===1&&md&1)tip+=' · verdeckt';
+    let g=`<g data-tip="${esc(tip)}"${c===1&&lay===0?` data-xy="${x},${y}"`:''}>`;
+    if(lay===0){
+      g+=`<rect x="${px+cs*.07}" y="${py+cs*.07}" width="${cs*.86}" height="${cs*.86}" rx="${cs*.16}" fill="${col}"/>`;
+      if(c===1){
+        const sc=l.scm&&l.scm[x+','+y],arr=Array.isArray(vv)?vv.map(t=>tcol(l,t)):[tcol(l,vv)],f=arr[0]?arr[0].c:(sc&&PAL[sc]?PAL[sc][0]:null);
+        if(f)g+=`<rect x="${px+cs*.07}" y="${py+cs*.07}" width="${cs*.86}" height="${cs*.86}" rx="${cs*.16}" fill="${f}"/>`;
+        if(arr.length>1&&arr.every(Boolean)){const w=cs*.86/arr.length;arr.forEach((a,q)=>{if(q)g+=`<rect x="${px+cs*.07+q*w}" y="${py+cs*.07}" width="${w}" height="${cs*.86}" fill="${a.c}"/>`;});}
+        if(!f&&vv&&!Array.isArray(vv))g+=`<text x="${px+cs/2}" y="${py+cs*.56}" font-size="${cs*.3}" text-anchor="middle" dominant-baseline="middle" fill="var(--box-fg)" font-family="IBM Plex Mono,monospace" font-weight="600">${vv}</text>`;
+        if(sc)g+=`<circle cx="${px+cs*.82}" cy="${py+cs*.18}" r="${cs*.08}" fill="var(--panel)" stroke="var(--ink)" stroke-width="${cs*.025}"/>`;
+        if(pc)g+=`<rect x="${px+cs*.09}" y="${py+cs*.09}" width="${cs*.82}" height="${cs*.82}" rx="${cs*.15}" fill="none" stroke="var(--ink)" stroke-width="${cs*.05}"/>`;
+        const mk=md&16?'S':md&8?'K':(md&1)?'?':'';
+        if(mk)g+=`<text x="${px+cs*.22}" y="${py+cs*.26}" font-size="${cs*.22}" text-anchor="middle" dominant-baseline="middle" fill="#fff" stroke="#000" stroke-width="${cs*.012}" font-family="IBM Plex Mono,monospace" font-weight="700">${mk}</text>`;
+      }else{
+        if(Array.isArray(vv)&&vv.length){const cols=vv.map(t=>tcol(l,Array.isArray(t)?t[0]:t));if(cols.every(Boolean)){const m=cols.length,w=cs*.76/m;cols.forEach((a,q)=>{g+=`<rect x="${px+cs*.12+q*w}" y="${py+cs*.72}" width="${Math.max(w-cs*.01,cs*.01)}" height="${cs*.14}" fill="${a.c}"/>`;});}}
+        g+=`<text x="${px+cs/2}" y="${py+cs*.44}" font-size="${cs*(info[0].length>2?.26:.32)}" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-family="IBM Plex Mono,monospace" font-weight="600">${info[0]}</text>`;
+      }
+    }else{
+      g+=`<rect x="${px+cs*.2}" y="${py+cs*.2}" width="${cs*.6}" height="${cs*.6}" rx="${cs*.12}" fill="${col}" stroke="var(--panel)" stroke-width="${cs*.05}"/><text x="${px+cs/2}" y="${py+cs*.52}" font-size="${cs*.22}" text-anchor="middle" dominant-baseline="middle" fill="#fff" font-family="IBM Plex Mono,monospace" font-weight="600">${info[0]}</text>`;
+    }
+    if(c===3&&DIRS[d]){const [dx,dy]=DIRS[d],cx=px+cs/2+dx*cs*.36,cy=py+cs/2-dy*cs*.36,a=Math.atan2(-dy,dx),t=cs*.13,pt=(r,ang)=>`${cx+Math.cos(ang)*r},${cy+Math.sin(ang)*r}`;
+      g+=`<polygon points="${pt(t,a)} ${pt(t,a+2.4)} ${pt(t,a-2.4)}" fill="var(--panel)" stroke="${col}" stroke-width="${cs*.03}"/>`;}
+    s+=g+'</g>';
+  }
+  if(sol.length){const byPos={};sol.forEach((st,i)=>{(byPos[st[0]+','+st[1]]=byPos[st[0]+','+st[1]]||[]).push(i);});
+    for(const k in byPos){const ix=byPos[k],[x,y]=k.split(',').map(Number),[px,py]=P(x,y),nxt=ix.find(i=>i>=step),now=nxt===step,done=nxt===undefined;
+      if(now)s+=`<rect x="${px+cs*.02}" y="${py+cs*.02}" width="${cs*.96}" height="${cs*.96}" rx="${cs*.2}" fill="none" stroke="var(--ink)" stroke-width="${cs*.06}"/>`;
+      if(done)s+=`<rect x="${px+cs*.07}" y="${py+cs*.07}" width="${cs*.86}" height="${cs*.86}" rx="${cs*.16}" fill="var(--board)" opacity=".65"/>`;
+      else if(sol[nxt][3]&&!ix.some(i=>i<step)&&!l.k.some((_,j)=>j%NF===0&&l.k[j]===x&&l.k[j+1]===y)){const tc=tcol(l,sol[nxt][2]);s+=`<rect x="${px+cs*.07}" y="${py+cs*.07}" width="${cs*.86}" height="${cs*.86}" rx="${cs*.16}" fill="${tc?tc.c:'var(--box)'}" opacity=".35" stroke="var(--ink)" stroke-dasharray="${cs*.06}" stroke-width="${cs*.02}"/>`;}
+      else if(ix.some(i=>i<step)){const tc=tcol(l,sol[nxt][2]);s+=`<rect x="${px+cs*.07}" y="${py+cs*.07}" width="${cs*.86}" height="${cs*.86}" rx="${cs*.16}" fill="${tc?tc.c:'var(--box)'}"/>`;}
+      const lab=done?'✓':(nxt+1)+(ix.filter(i=>i>nxt).length?'+':'');
+      s+=`<text x="${px+cs/2}" y="${py+cs*.56}" font-size="${cs*(lab.length>3?.26:.36)}" text-anchor="middle" dominant-baseline="middle" fill="${done?'var(--ink)':'#fff'}" stroke="${done?'none':'rgba(0,0,0,.45)'}" stroke-width="${cs*.02}" font-family="Familjen Grotesk,sans-serif" font-weight="700" pointer-events="none">${lab}</text>`;}}
+  if(sol.length){sol.forEach((st,i)=>{const pr=st[5];if(!pr)return;const [px,py]=P(pr[0],pr[1]),done=i<step;
+      if(done){s+=`<rect x="${px+cs*.07}" y="${py+cs*.07}" width="${cs*.86}" height="${cs*.86}" rx="${cs*.16}" fill="var(--board)" opacity=".65"/><text x="${px+cs/2}" y="${py+cs*.56}" font-size="${cs*.36}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink)" font-family="Familjen Grotesk,sans-serif" font-weight="700" pointer-events="none">✓</text>`;return;}
+      s+=`<rect x="${px+cs*.05}" y="${py+cs*.05}" width="${cs*.9}" height="${cs*.9}" rx="${cs*.18}" fill="none" stroke="var(--ink)" stroke-dasharray="${cs*.08}" stroke-width="${cs*(i===step?.06:.03)}"/><text x="${px+cs/2}" y="${py+cs*.56}" font-size="${cs*.26}" text-anchor="middle" dominant-baseline="middle" fill="#fff" stroke="rgba(0,0,0,.45)" stroke-width="${cs*.02}" font-family="Familjen Grotesk,sans-serif" font-weight="700" pointer-events="none">mit ${i+1}</text>`;});}
+  (l.rk||[]).forEach(([x,y],i)=>{const [px,py]=P(x,y);
+    s+=`<g pointer-events="none"><rect x="${px+cs*.05}" y="${py+cs*.05}" width="${cs*.9}" height="${cs*.9}" rx="${cs*.18}" fill="var(--board)" opacity=".75" stroke="var(--vhard)" stroke-width="${cs*.06}"/><text x="${px+cs/2}" y="${py+cs*.56}" font-size="${cs*.3}" text-anchor="middle" dominant-baseline="middle" fill="var(--vhard)" font-family="Familjen Grotesk,sans-serif" font-weight="700">R${i+1}</text></g>`;});
+  s+=`<rect x="${ox}" y="${Math.min(99.4,oy+B.h*cs+cs*.1)}" width="${B.w*cs}" height="${cs*.07}" rx="${cs*.035}" fill="var(--accent)" opacity=".7"/>`;
+  $('board').innerHTML=s;
+  $('legend').innerHTML=ORDER.filter(c=>used.has(c)).map(c=>`<span><i style="background:var(${FAM[CAT[c][2]]})"></i>${CAT[c][1]}</span>`).join('')+(l.w.length?`<span><i style="background:var(--wall)"></i>Wand</span>`:'');
+  return B;
+}
+
+function drawSteps(l,B){
+  const sol=l.sol||[];
+  $('noSol').hidden=sol.length>0;$('steps').hidden=!sol.length;
+  $('stepcount').textContent=sol.length?`${sol.length} Züge`:'';
+  $('sprev').disabled=!sol.length||step<=0;$('snext').disabled=!sol.length||step>=sol.length-1;
+  if(!sol.length){$('solnote').hidden=true;$('stitle').textContent='Lösung noch nicht berechnet';$('stext').textContent=l.nos?'Der Löser kennt noch nicht alle Mechaniken dieses Levels.':'Für dieses Level gibt es keine Lösung.';$('steps').innerHTML='';
+    $('noSol').textContent=l.nos?`Für dieses Level gibt es noch keinen Lösungsweg, weil der Löser diese Mechaniken noch nicht nachbildet: ${[...new Set(l.nos.map(x=>NOS[x]||x))].join(', ')}.`:'Für dieses Level ist keine Lösung berechnet.';return;}
+  const info=st=>({x:st[0]-cx0(l)+1,y:st[1],r:B.y1-st[1]+1,t:st[2],sp:st[3]});
+  const linkTxt=st=>st[5]?`die verbundene Box (${cname(l,st[5][2])}, Sp ${st[5][0]-cx0(l)+1} · R ${B.y1-st[5][1]+1})`:'';
+  $('steps').innerHTML=sol.map((st,i)=>{const s=info(st),tc=tcol(l,s.t);return `<li><button type="button" data-s="${i}" aria-current="${i===step}"><span class="n">${i+1}</span><span class="sw" style="background:${tc?tc.c:'var(--box)'}"></span><span>${esc(cname(l,s.t))}${s.sp?' <small>(nachgerückt)</small>':''}${st[5]?` <small title="${esc('Löst automatisch '+linkTxt(st)+' mit aus')}">· + verbunden</small>`:''}${st[4]?` <small title="${esc('Danach hilft das Spiel automatisch: '+autoTxt(st[4]))}">· danach automatisch</small>`:''}</span><span class="w">Sp ${s.x} · R ${s.r}</span></button></li>`;}).join('');
+  const s=info(sol[step]);$('stitle').textContent=`Zug ${step+1} von ${sol.length}`;$('stext').textContent=`Tippe ${cname(l,s.t)} in Spalte ${s.x}, Reihe ${s.r}`+(s.sp?' (Box ist nachgerückt)':'')+(sol[step][5]?`. Das löst automatisch auch ${linkTxt(sol[step])} mit aus`:'')+(sol[step][4]?`. Danach geht nichts mehr, und das Spiel hilft automatisch: ${autoTxt(sol[step][4])}.`:'');
+  const notes=[];
+  if(l.tight===2)notes.push(`Achtung: Nach meinem Modell läuft das Band hier über (bis ${l.pk} von ${l.cap} Kugeln). Der Weg ist deshalb unsicher, vermutlich brauchst du ein Hilfsmittel.`);
+  else if(l.tight)notes.push(`Achtung: Selbst der beste Weg füllt das Band ganz (${l.pk} von ${l.cap} Kugeln). Laut Spielcode ist das knapp an der Niederlage.`);
+  else if(l.pk!=null)notes.push(`Das Band ist dabei höchstens mit ${l.pk} von ${l.cap} Kugeln belegt.`);
+  if(l.rr&&l.rr.key===rkKey(l))notes.unshift(`Dieser Weg gilt für ${l.rr.n===1?'den markierten Raketentreffer':`die ${l.rr.n} markierten Raketentreffer`} (im Browser berechnet).`);
+  if(l.auto0&&l.auto0.length)notes.push(`Gleich zu Beginn hilft das Spiel automatisch: ${autoTxt(l.auto0)}.`);
+  if(l.uns)notes.push(`Nicht ganz sicher nachgebildet: ${l.uns.map(x=>UNS[x]||x).join(', ')}.`);
+  const sn=$('solnote');sn.hidden=!notes.length;sn.textContent=notes.join(' ');sn.classList.toggle('warn',!!(l.tight||l.uns));
+}
+
+function drawCups(l){
+  const cq=l.cq;
+  if(!cq){$('cups').innerHTML='<div class="empty">Für dieses Level lassen sich die Becher nicht berechnen, weil sein Seed von der unbekannten Levelnummer abhängt.</div>';$('cups').style.gridTemplateColumns='1fr';$('cupn').textContent='';$('cupnote').textContent='';return;}
+  const lanes=cq.map(x=>x.map(t=>({t})));(l.bk||[]).forEach(([ln,ix,cap,t])=>{if(lanes[ln])lanes[ln].splice(Math.min(Math.max(ix,0),lanes[ln].length),0,{t,cap});});
+  $('cupn').textContent=`${cq.reduce((a,x)=>a+x.length,0)} Becher · ${cq.length} Spuren`;
+  $('cups').style.gridTemplateColumns=`repeat(${cq.length},minmax(0,1fr))`;
+  const ice=new Set((l.ic||[]).map(([a,b])=>a+','+b));
+  const rf={};if(l.rr&&l.rr.key===rkKey(l))(l.rr.pf||[]).forEach(([a,b,v])=>{rf[a+','+b]=v;});
+  $('cups').innerHTML=lanes.map((x,i)=>`<div class="lane"><span class="lh">Spur ${i+1}</span>${x.map((c,r)=>{const tc=tcol(l,c.t),f=rf[i+','+r],ic=ice.has(i+','+r);return `<span class="cup${c.cap?' bk':''}${f?' rf':''}${ic?' ice':''}" style="${tc?'background:'+tc.c:''}" title="${c.cap?'Eimer · ':''}Platz ${r+1} · ${esc(cname(l,c.t))}${ic?' · vereist':''}${f?` · ${f} Kugeln von Raketen`:''}">${c.cap?'Eimer '+c.cap:(tc?'':c.t)}</span>`;}).join('')}</div>`).join('');
+  $('cupnote').textContent='Oben wartet der Becher, der als Nächstes Kugeln bekommt. Jeder Becher fasst 3 Kugeln.'+(ice.size?' ❄ = vereister Becher: Er taut auf, wenn er vorne steht und in den Nachbarspuren zwei Becher fertig werden. Bis dahin nimmt er keine Kugeln.':'')+(l.bk?' Eimer-Positionen sind aus den Daten übernommen, aber nicht per Screenshot geprüft.':'');
+}
+
+function drawFacts(l,B){
+  const cnt={};for(let j=0;j<l.k.length;j+=NF)cnt[l.k[j+2]]=(cnt[l.k[j+2]]||0)+1;
+  const stored=l.k.filter((_,j)=>j%NF===7).reduce((a,b)=>a+b,0);
+  const mech=ORDER.filter(c=>c!==1&&l.cats.has(c)).map(c=>CAT[c][1]);
+  const rows=[['Im Spiel',l.lv?`Level ${l.lv}`+(l.scm?' (Screenshot)':''):'Position unbekannt'],['Gruppe',GROUP[l.b]],['Schwierigkeit',DIFF[l.h]],['Farben',l.c+(l.pn?` (${l.pn})`:'')],['Seed',l.s],['Raster',`${B.w} × ${B.h} Felder`],['Boxen im Raster',cnt[1]||0],['Boxen in Containern',stored],['Kunden-Reihen',l.l?`${l.l}`+(l.hp?` (bis ${Math.round(l.hp*100)} % verdeckt)`:''):'Standard'],['Mechaniken',mech.length?[...new Set(mech)].join(', '):'keine']];
+  $('facts').innerHTML=rows.map(([k,v])=>`<div><dt>${k}</dt><dd>${esc(v)}</dd></div>`).join('');
+  const pal=l.rm?[...new Set(Object.values(l.rm))]:[];
+  $('pal').innerHTML=pal.map(id=>`<span class="sw2"><i style="background:${(PAL[id]||['#888'])[0]}"></i>${(PAL[id]||['','ID '+id])[1]}</span>`).join('');
+  let pn='';
+  if(l.rm){pn=`Echte Farben für Level ${l.lv}: ${MODE[l.rmode]||''}.`;if(l.vt)pn+=' Achtung: Das Level hat Varianten für die Schwierigkeitsanpassung, bei manchen Spielern kann die Reihenfolge abweichen.';}
+  else if(l.ss===1)pn='Dieses Level nimmt die Levelnummer als Seed. Seine Position im Spiel ist nicht bekannt, deshalb lassen sich weder Verteilung noch Farben berechnen.';
+  else pn='Die Position dieses Levels im Spiel ist nicht bekannt. Welche Boxen gleich gefärbt sind, steht fest (Zahlen = Farbgruppe); die Farbtöne hängen von der Levelnummer ab.';
+  $('palnote').textContent=pn;
+  $('exbtn').hidden=!!l.rm||!l.rc;
+}
+
+function show(p,keepStep){
+  p=Math.max(0,Math.min(SEQ.length-1,p));
+  const ready=!L[SEQ[p]]._stub;
+  if(!ready){$('stitle').textContent='Lade Level …';$('stext').textContent='';}
+  ensure(p).then(()=>{showNow(p,keepStep);ensure(p+1);ensure(p-1);}).catch(e=>{$('stitle').textContent='Fehler beim Laden';$('stext').textContent=e.message;});
+}
+function showNow(p,keepStep){
+  if(!keepStep)rkMarking=false;
+  pos=Math.max(0,Math.min(SEQ.length-1,p));if(!keepStep)step=0;
+  const l=L[SEQ[pos]];
+  if(!l._base)l._base={sol:l.sol,pk:l.pk,cap:l.cap,tight:l.tight,auto0:l.auto0};else if(!l.vars)Object.assign(l,l._base);
+  applyVariant(l);
+  if(l.rr&&l.rr.key===rkKey(l)&&l.rr.sol)Object.assign(l,{sol:l.rr.sol,pk:l.rr.pk,cap:l.rr.cap,tight:l.rr.tight,auto0:l.rr.auto0});
+  drawRk(l);
+  $('lvtitle').textContent=l.lv?`Level ${l.lv}`:l.n;
+  let t='';if(l.b===2)t+=' <span class="tag e">Turnier</span>';if(l.b===0)t+=' <span class="tag t">Tutorial</span>';if(l.h===1)t+=' <span class="tag h">Schwer</span>';if(l.h===2)t+=' <span class="tag v">Sehr schwer</span>';
+  $('lvtags').innerHTML=t;$('lvname').textContent=l.n;
+  const pl=pos>0?L[SEQ[pos-1]]:null,nl=pos<SEQ.length-1?L[SEQ[pos+1]]:null;
+  $('prev').disabled=!pl;$('next').disabled=!nl;$('prevl').textContent=pl?(pl.lv||'zurück'):'';$('nextl').textContent=nl?(nl.lv||'weiter'):'';
+  const B=drawBoard(l);drawSteps(l,B);drawCups(l);drawFacts(l,B);
+  document.title=(l.lv?`Level ${l.lv}`:l.n)+' · Marble Sort Levelatlas';
+  try{history.replaceState(null,'','#'+(l.lv?'lv'+l.lv:'i'+l.i));}catch(e){}
+  try{localStorage.setItem('ms-pos',String(l.i));}catch(e){}
+}
+
+function applyVariant(l){
+  const vs=$('varsel');
+  if(!l.vars){vs.hidden=true;return;}
+  if(l.vk==null){let k=0;try{const v=localStorage.getItem('ms-var-'+l.lv);if(v!=null)k=+v;}catch(e){}l.vk=Math.min(k,l.vars.length-1);}
+  const v=l.vars[l.vk];
+  ['sol','pk','cap','tight','uns','auto0','cq','bk','nos','ic'].forEach(f=>{l[f]=v[f];});
+  const names=['Standard','Variante A','Variante B','Variante C'];
+  vs.hidden=false;
+  const row=(x,r)=>x.cq.map(q=>q[r]);const fd=(a,b)=>{let r=0;while(r<40&&JSON.stringify(row(a,r))===JSON.stringify(row(b,r)))r++;return r;};let R=0;l.vars.forEach((a,i)=>l.vars.forEach((b,j)=>{if(i<j)R=Math.max(R,fd(a,b));}));
+  const shown=R>0?[0,R]:[0];
+  const chips=x=>shown.map(r=>`<small>R${r+1}</small>`+row(x,r).map(q=>{const tc=tcol(l,q);return `<i style="background:${tc?tc.c:'var(--box)'}"></i>`;}).join('')).join('<b style="width:6px"></b>');
+  vs.innerHTML=`<span>Das Spiel stellt die Becher je nach Spielverlauf unterschiedlich zusammen. Wähle die Variante, deren Becher zu deinem Bildschirm passen${R>0?` (gezeigt: Becherreihe 1 und Reihe ${R+1}, Spur 1 bis ${l.vars[0].cq.length} von links nach rechts. Erst in Reihe ${R+1} unterscheiden sich alle Varianten. Spätere Reihen siehst du im Spiel erst nach ein paar Zügen.)`:''}:</span>`+l.vars.map((x,k)=>`<button type="button" data-v="${k}" aria-pressed="${k===l.vk}">${names[k]||'Variante '+k} ${chips(x)}</button>`).join('');
+}
+
+// ---------- Raketen: Weg im Browser neu berechnen (Python-Löser über Pyodide) ----------
+let RK=null,PYSRC=null,rkWorker=null,rkMain=null,rkBusy=false,rkMarking=false,rkSeq=0;
+const PYO='https://cdn.jsdelivr.net/npm/pyodide@0.26.4/';
+RK={};
+function rkData(){return RKAV;}
+const rkKey=l=>l.lv?(l.vars?l.lv+'#'+(l.vk||0):String(l.lv)):null;
+function rkStatus(t,err){const e=$('rkst');e.textContent=t||'';e.classList.toggle('err',!!err);}
+function drawRk(l){
+  const k=rkKey(l),ok=!!(k&&rkData()[k]);$('rkbox').hidden=!ok;
+  if(!ok){rkMarking=false;$('board').classList.remove('marking');return;}
+  const n=(l.rk||[]).length,act=!!(l.rr&&l.rr.key===k);
+  $('rkmark').setAttribute('aria-pressed',String(rkMarking));$('rkmark').textContent=rkMarking?'Markieren beenden':'Treffer markieren';
+  $('board').classList.toggle('marking',rkMarking);
+  $('rkgo').disabled=rkBusy||!n||act;$('rkclr').hidden=!n&&!act;
+  if(!rkBusy){if(act)rkStatus(l.rr.sol?'Weg mit Raketen berechnet':'');else if(n)rkStatus(`${n} von 3 Treffern markiert`);else if(!$('rkst').classList.contains('err'))rkStatus('');}
+}
+function rkWorkerSrc(){return `let py=null;
+onmessage=async e=>{const m=e.data;try{
+ if(!py){postMessage({id:m.id,st:'load'});importScripts('${PYO}pyodide.js');py=await loadPyodide({indexURL:'${PYO}'});
+  py.FS.mkdirTree('/rk');for(const n in m.src)py.FS.writeFile('/rk/'+n,m.src[n]);py.runPython("import sys\\nsys.path.insert(0,'/rk')\\nimport rkweb");}
+ postMessage({id:m.id,st:'run'});py.globals.set('B',m.blob);py.globals.set('H',m.hits);
+ postMessage({id:m.id,res:py.runPython('rkweb.run(B,H,8)')});
+}catch(err){postMessage({id:m.id,err:String(err&&err.message||err)});}};`;}
+async function rkMainRun(m,cb){
+  if(!rkMain){cb({st:'load'});if(!window.loadPyodide)await new Promise((ok,no)=>{const sc=document.createElement('script');sc.src=PYO+'pyodide.js';sc.onload=ok;sc.onerror=()=>no(new Error('Python-Laufzeit konnte nicht geladen werden'));document.head.appendChild(sc);});
+    const py=await loadPyodide({indexURL:PYO});py.FS.mkdirTree('/rk');for(const n in m.src)py.FS.writeFile('/rk/'+n,m.src[n]);py.runPython("import sys\nsys.path.insert(0,'/rk')\nimport rkweb");rkMain=py;}
+  cb({st:'run'});await new Promise(r=>setTimeout(r,30));rkMain.globals.set('B',m.blob);rkMain.globals.set('H',m.hits);return rkMain.runPython('rkweb.run(B,H,8)');
+}
+function rkRun(){
+  const l=L[SEQ[pos]],k=rkKey(l);if(!k||rkBusy||!(l.rk||[]).length)return;
+  rkStatus('Lade Leveldaten …');
+  Promise.all([PYSRC?null:gunz(MAN.py).then(x=>{PYSRC=x;}),RK[k]?null:fetch(MAN.rk+k.replace('#','_')+'.txt').then(r=>{if(!r.ok)throw new Error('Leveldaten fehlen ('+r.status+')');return r.text();}).then(x=>{RK[k]=x.trim();})])
+    .then(()=>rkRun0()).catch(e=>rkStatus('Fehler: '+e.message,true));
+}
+function rkRun0(){
+  const l=L[SEQ[pos]],k=rkKey(l);if(!k||rkBusy||!(l.rk||[]).length)return;
+  rkBusy=true;const id=++rkSeq,hits=JSON.stringify(l.rk),m={id,src:PYSRC,blob:RK[k],hits};drawRk(l);
+  const st=x=>{if(x.st==='load')rkStatus('Lade Python (einmalig ca. 13 MB) …');if(x.st==='run')rkStatus('Rechne …');};
+  const done=(res,err)=>{rkBusy=false;
+    if(err){rkStatus('Fehler: '+err,true);drawRk(L[SEQ[pos]]);return;}
+    let r;try{r=JSON.parse(res);}catch(e){r={err:'Antwort unlesbar'};}
+    if(r.err||r.fail){l.rr=null;rkStatus(r.fail?'Mit diesen Treffern finde ich keinen sicheren Weg.':'Fehler: '+r.err,true);}
+    else l.rr={key:k,n:l.rk.length,hits,sol:r.s,pk:r.pk,cap:r.cap,tight:r.tight,auto0:r.auto0,pf:r.pf};
+    rkMarking=false;if(L[SEQ[pos]]===l){step=0;show(pos,true);}else drawRk(L[SEQ[pos]]);};
+  const fallback=()=>rkMainRun(m,st).then(x=>done(x)).catch(e=>done(null,e.message||String(e)));
+  try{
+    if(!rkWorker){rkWorker=new Worker(URL.createObjectURL(new Blob([rkWorkerSrc()],{type:'text/javascript'})));}
+    let started=false;
+    rkWorker.onmessage=e=>{const x=e.data;if(x.id!==id)return;started=true;if(x.st)st(x);else if(x.err){if(/importScripts|NetworkError|Failed to fetch|Load failed/i.test(x.err)&&!rkMain){rkWorker=null;fallback();}else done(null,x.err);}else done(x.res);};
+    rkWorker.onerror=()=>{if(!started){rkWorker=null;fallback();}};
+    rkWorker.postMessage(m);
+  }catch(e){rkWorker=null;fallback();}
+}
+function rkToggle(x,y){
+  const l=L[SEQ[pos]];l.rk=l.rk||[];const i=l.rk.findIndex(([a,b])=>a===x&&b===y);
+  if(i>=0)l.rk.splice(i,1);else if(l.rk.length<3)l.rk.push([x,y]);else{rkStatus('Höchstens 3 Raketen. Tippe einen Treffer erneut an, um ihn zu entfernen.',true);return;}
+  l.rr=null;rkStatus('');step=0;show(pos,true);
+}
+
+async function jump(q){
+  q=q.trim();if(!q)return;let p=-1;
+  if(!/^\d+$/.test(q)&&!NAMES){try{NAMES=await gunz(MAN.names);NAMES.forEach((n,i)=>{if(L[i]._stub)L[i].n=n;});}catch(e){$('jerr').textContent=e.message;return;}}
+  const nm=i=>(NAMES?NAMES[i]:L[i].n)||'';
+  if(/^\d+$/.test(q))p=SEQ.findIndex(i=>L[i].lv===+q);
+  else{const lq=q.toLowerCase();p=SEQ.findIndex(i=>nm(i).toLowerCase()===lq);if(p<0)p=SEQ.findIndex(i=>nm(i).toLowerCase().includes(lq));}
+  if(p<0){$('jerr').textContent=/^\d+$/.test(q)?`Level ${q} gibt es in der Reihenfolge nicht.`:'Kein Level mit diesem Namen.';return;}
+  $('jerr').textContent='';show(p);
+}
+
+function bind(){
+  $('varsel').addEventListener('click',e=>{const b=e.target.closest('[data-v]');if(!b)return;const l=L[SEQ[pos]];l.vk=+b.dataset.v;try{localStorage.setItem('ms-var-'+l.lv,b.dataset.v);}catch(er){}step=0;show(pos,true);});
+  $('rkmark').onclick=()=>{rkMarking=!rkMarking;rkStatus('');drawRk(L[SEQ[pos]]);};
+  $('rkgo').onclick=rkRun;
+  $('rkclr').onclick=()=>{const l=L[SEQ[pos]];l.rk=[];l.rr=null;rkMarking=false;rkStatus('');step=0;show(pos,true);};
+  $('board').addEventListener('click',e=>{if(!rkMarking)return;const g=e.target.closest('[data-xy]');if(!g)return;const [x,y]=g.dataset.xy.split(',').map(Number);rkToggle(x,y);});
+  $('prev').onclick=()=>show(pos-1);$('next').onclick=()=>show(pos+1);
+  $('jumpf').addEventListener('submit',e=>{e.preventDefault();jump($('jump').value);});
+  $('sprev').onclick=()=>{step=Math.max(0,step-1);show(pos,true);};
+  $('snext').onclick=()=>{step++;show(pos,true);};
+  $('steps').addEventListener('click',e=>{const b=e.target.closest('[data-s]');if(b){step=+b.dataset.s;show(pos,true);}});
+  $('exbtn').onclick=()=>{example=!example;$('exbtn').setAttribute('aria-pressed',String(example));$('exbtn').textContent=example?'Farbgruppen ausblenden':'Farbgruppen zeigen';show(pos,true);};
+  addEventListener('keydown',e=>{if(e.target.closest('input'))return;if(e.key==='ArrowLeft'&&!e.altKey)show(pos-1);if(e.key==='ArrowRight'&&!e.altKey)show(pos+1);});
+  const tip=$('tip');
+  $('board').addEventListener('mousemove',e=>{const g=e.target.closest('[data-tip]');if(!g){tip.hidden=true;return;}tip.textContent=g.dataset.tip;tip.hidden=false;tip.style.left=Math.min(e.clientX+12,innerWidth-270)+'px';tip.style.top=(e.clientY+14)+'px';});
+  $('board').addEventListener('mouseleave',()=>tip.hidden=true);
+}
+
+load().then(()=>{
+  bind();
+  let start=0;const h=location.hash.slice(1);
+  if(/^lv\d+$/.test(h)){const p=SEQ.findIndex(i=>L[i].lv===+h.slice(2));if(p>=0)start=p;}
+  else if(/^i\d+$/.test(h)){const p=SEQ.indexOf(+h.slice(1));if(p>=0)start=p;}
+  else{try{const v=localStorage.getItem('ms-pos');if(v!==null){const p=SEQ.indexOf(+v);if(p>=0)start=p;}}catch(e){}}
+  show(start);
+}).catch(err=>{$('main').innerHTML=`<div class="loading">${esc(err.message)}</div>`;});
+})();
+</script>
+</body>
+</html>

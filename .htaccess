@@ -1,0 +1,30 @@
+# Marble Sort Levelatlas – Apache-Einstellungen für wenig Traffic
+# Die Leveldaten (d/*.dat) sind schon gzip-komprimiert und tragen einen Hash im Namen:
+# sie ändern sich nie und dürfen ein Jahr im Browser bleiben.
+<IfModule mod_mime.c>
+  AddType application/octet-stream .dat
+  AddType text/plain .txt
+  AddCharset utf-8 .html .txt
+</IfModule>
+<FilesMatch "\.dat$">
+  <IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=31536000, immutable"
+    Header unset Content-Encoding
+  </IfModule>
+  SetEnv no-gzip 1
+</FilesMatch>
+<IfModule mod_headers.c>
+  <FilesMatch "\.txt$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+</IfModule>
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain
+</IfModule>
+<IfModule mod_expires.c>
+  ExpiresActive Off
+</IfModule>
+Options -Indexes
