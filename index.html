@@ -262,6 +262,8 @@ function drawBoard(l){
       g+=`<polygon points="${pt(t,a)} ${pt(t,a+2.4)} ${pt(t,a-2.4)}" fill="var(--panel)" stroke="${col}" stroke-width="${cs*.03}"/>`;}
     s+=g+'</g>';
   }
+  const rkDone=!!(l.rr&&l.rr.key===rkKey(l))&&!rkMarking;
+  if(rkDone)(l.rk||[]).forEach(([x,y])=>{const [px,py]=P(x,y);s+=`<rect pointer-events="none" x="${px+cs*.04}" y="${py+cs*.04}" width="${cs*.92}" height="${cs*.92}" rx="${cs*.16}" fill="var(--board)"/>`;});
   if(sol.length){const byPos={};sol.forEach((st,i)=>{(byPos[st[0]+','+st[1]]=byPos[st[0]+','+st[1]]||[]).push(i);});
     for(const k in byPos){const ix=byPos[k],[x,y]=k.split(',').map(Number),[px,py]=P(x,y),nxt=ix.find(i=>i>=step),now=nxt===step,done=nxt===undefined;
       if(now)s+=`<rect x="${px+cs*.02}" y="${py+cs*.02}" width="${cs*.96}" height="${cs*.96}" rx="${cs*.2}" fill="none" stroke="var(--ink)" stroke-width="${cs*.06}"/>`;
@@ -274,6 +276,7 @@ function drawBoard(l){
       if(done){s+=`<rect x="${px+cs*.07}" y="${py+cs*.07}" width="${cs*.86}" height="${cs*.86}" rx="${cs*.16}" fill="var(--board)" opacity=".65"/><text x="${px+cs/2}" y="${py+cs*.56}" font-size="${cs*.36}" text-anchor="middle" dominant-baseline="middle" fill="var(--ink)" font-family="Familjen Grotesk,sans-serif" font-weight="700" pointer-events="none">✓</text>`;return;}
       s+=`<rect x="${px+cs*.05}" y="${py+cs*.05}" width="${cs*.9}" height="${cs*.9}" rx="${cs*.18}" fill="none" stroke="var(--ink)" stroke-dasharray="${cs*.08}" stroke-width="${cs*(i===step?.06:.03)}"/><text x="${px+cs/2}" y="${py+cs*.56}" font-size="${cs*.26}" text-anchor="middle" dominant-baseline="middle" fill="#fff" stroke="rgba(0,0,0,.45)" stroke-width="${cs*.02}" font-family="Familjen Grotesk,sans-serif" font-weight="700" pointer-events="none">mit ${i+1}</text>`;});}
   (l.rk||[]).forEach(([x,y],i)=>{const [px,py]=P(x,y);
+    if(rkDone)return;
     s+=`<g pointer-events="none"><rect x="${px+cs*.05}" y="${py+cs*.05}" width="${cs*.9}" height="${cs*.9}" rx="${cs*.18}" fill="var(--board)" opacity=".75" stroke="var(--vhard)" stroke-width="${cs*.06}"/><text x="${px+cs/2}" y="${py+cs*.56}" font-size="${cs*.3}" text-anchor="middle" dominant-baseline="middle" fill="var(--vhard)" font-family="Familjen Grotesk,sans-serif" font-weight="700">R${i+1}</text></g>`;});
   s+=`<rect x="${ox}" y="${Math.min(99.4,oy+B.h*cs+cs*.1)}" width="${B.w*cs}" height="${cs*.07}" rx="${cs*.035}" fill="var(--accent)" opacity=".7"/>`;
   $('board').innerHTML=s;
