@@ -263,12 +263,13 @@ function drawBoard(l){
     s+=g+'</g>';
   }
   const rkDone=!!(l.rr&&l.rr.key===rkKey(l))&&!rkMarking;
-  if(rkDone)(l.rk||[]).forEach(([x,y])=>{const [px,py]=P(x,y);s+=`<rect pointer-events="none" x="${px+cs*.04}" y="${py+cs*.04}" width="${cs*.92}" height="${cs*.92}" rx="${cs*.16}" fill="var(--board)"/>`;});
+  const rkHit=new Set(rkDone?(l.rk||[]).map(([x,y])=>x+','+y):[]);
+  if(rkDone)(l.rk||[]).forEach(([x,y],i)=>{const [px,py]=P(x,y);s+=`<rect data-tip="${esc(`Von Rakete ${i+1} weggesprengt · Spalte ${x-cx0(l)+1}, Reihe ${B.y1-y+1}`)}" x="${px+cs*.04}" y="${py+cs*.04}" width="${cs*.92}" height="${cs*.92}" rx="${cs*.16}" fill="var(--board)"/>`;});
   if(sol.length){const byPos={};sol.forEach((st,i)=>{(byPos[st[0]+','+st[1]]=byPos[st[0]+','+st[1]]||[]).push(i);});
     for(const k in byPos){const ix=byPos[k],[x,y]=k.split(',').map(Number),[px,py]=P(x,y),nxt=ix.find(i=>i>=step),now=nxt===step,done=nxt===undefined;
       if(now)s+=`<rect x="${px+cs*.02}" y="${py+cs*.02}" width="${cs*.96}" height="${cs*.96}" rx="${cs*.2}" fill="none" stroke="var(--ink)" stroke-width="${cs*.06}"/>`;
       if(done)s+=`<rect x="${px+cs*.07}" y="${py+cs*.07}" width="${cs*.86}" height="${cs*.86}" rx="${cs*.16}" fill="var(--board)" opacity=".65"/>`;
-      else if(sol[nxt][3]&&!ix.some(i=>i<step)&&!l.k.some((_,j)=>j%NF===0&&l.k[j]===x&&l.k[j+1]===y)){const tc=tcol(l,sol[nxt][2]);s+=`<rect x="${px+cs*.07}" y="${py+cs*.07}" width="${cs*.86}" height="${cs*.86}" rx="${cs*.16}" fill="${tc?tc.c:'var(--box)'}" opacity=".35" stroke="var(--ink)" stroke-dasharray="${cs*.06}" stroke-width="${cs*.02}"/>`;}
+      else if(sol[nxt][3]&&!ix.some(i=>i<step)&&(rkHit.has(x+','+y)||!l.k.some((_,j)=>j%NF===0&&l.k[j]===x&&l.k[j+1]===y))){const tc=tcol(l,sol[nxt][2]);s+=`<rect x="${px+cs*.07}" y="${py+cs*.07}" width="${cs*.86}" height="${cs*.86}" rx="${cs*.16}" fill="${tc?tc.c:'var(--box)'}" opacity=".35" stroke="var(--ink)" stroke-dasharray="${cs*.06}" stroke-width="${cs*.02}"/>`;}
       else if(ix.some(i=>i<step)){const tc=tcol(l,sol[nxt][2]);s+=`<rect x="${px+cs*.07}" y="${py+cs*.07}" width="${cs*.86}" height="${cs*.86}" rx="${cs*.16}" fill="${tc?tc.c:'var(--box)'}"/>`;}
       const lab=done?'✓':(nxt+1)+(ix.filter(i=>i>nxt).length?'+':'');
       s+=`<text x="${px+cs/2}" y="${py+cs*.56}" font-size="${cs*(lab.length>3?.26:.36)}" text-anchor="middle" dominant-baseline="middle" fill="${done?'var(--ink)':'#fff'}" stroke="${done?'none':'rgba(0,0,0,.45)'}" stroke-width="${cs*.02}" font-family="Familjen Grotesk,sans-serif" font-weight="700" pointer-events="none">${lab}</text>`;}}
